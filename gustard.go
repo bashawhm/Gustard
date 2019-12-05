@@ -6,7 +6,7 @@ import (
 )
 
 func handler(client net.Conn) {
-
+	//Hanlder for incomming connections
 }
 
 func main() {
