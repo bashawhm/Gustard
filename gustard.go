@@ -6,7 +6,11 @@ import (
 )
 
 func handler(client net.Conn) {
-	//Hanlder for incomming connections
+	k := 1024
+
+	pubKey, privKey := genKeys(k)
+	fmt.Println(pubKey)
+	fmt.Println(privKey)
 }
 
 func main() {
