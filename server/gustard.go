@@ -55,6 +55,8 @@ func handler(client net.Conn, msgs chan string) {
 			clientPubKey.g = &g
 			clientPubKey.a = &a
 			fmt.Println(clientPubKey)
+		default:
+			fmt.Println(command)
 		}
 	}
 }
@@ -67,8 +69,8 @@ func main() {
 		return
 	}
 
-	msgs := make(chan string)
-	clients := make(chan net.Conn)
+	msgs := make(chan string, 1)
+	clients := make(chan net.Conn, 1)
 
 	go broadcaster(msgs, clients)
 

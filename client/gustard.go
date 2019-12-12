@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+func chatter(conn net.Conn) {
+	cin := bufio.NewScanner(bufio.NewReader(os.Stdin))
+	cin.Split(bufio.ScanLines)
+
+	for cin.Scan() {
+		//TODO: encryption
+		fmt.Fprintf(conn, cin.Text()+"\n")
+	}
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: " + os.Args[0] + " <IP>")
@@ -27,6 +37,8 @@ func main() {
 	pubKey, privKey := genKeys(k)
 	fmt.Println("CLI Pub Key ", pubKey)
 	fmt.Println("CLI Priv Key ", privKey)
+
+	go chatter(conn)
 
 	nin := bufio.NewScanner(bufio.NewReader(conn))
 	nin.Split(bufio.ScanLines)
