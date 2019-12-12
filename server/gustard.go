@@ -8,9 +8,24 @@ import (
 	"strings"
 )
 
-func handler(client net.Conn) {
+func broadcaster(msgs chan string, clis chan net.Conn) {
+	var clients []net.Conn
+	for {
+		select {
+		case cli := <-clis:
+			clients = append(clients, cli)
+		case msg := <-msgs:
+			for i := 0; i < len(clients); i++ {
+				fmt.Fprintf(clients[i], msg)
+			}
+		}
+	}
+}
+
+func handler(client net.Conn, msgs chan string) {
 	k := 1024
 
+	fmt.Println("Generating Keys...")
 	pubKey, privKey := genKeys(k)
 	var clientPubKey PubKey
 	fmt.Println(pubKey)
@@ -52,6 +67,11 @@ func main() {
 		return
 	}
 
+	msgs := make(chan string)
+	clients := make(chan net.Conn)
+
+	go broadcaster(msgs, clients)
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -61,7 +81,8 @@ func main() {
 
 		fmt.Print("Accepted connection: ")
 		fmt.Println(conn.RemoteAddr().String())
-		go handler(conn)
+		clients <- conn
+		go handler(conn, msgs)
 	}
 
 }

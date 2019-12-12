@@ -51,6 +51,8 @@ func main() {
 			fmt.Println("SERV Pub Key ", serverPubKey)
 			keyCommand := "PUBKEY " + pubKey.p.String() + " " + pubKey.g.String() + " " + pubKey.a.String() + "\n"
 			fmt.Fprintf(conn, keyCommand)
+		default:
+			fmt.Println(command)
 		}
 	}
 }
