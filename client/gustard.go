@@ -15,12 +15,18 @@ func main() {
 		return
 	}
 	fmt.Println("Estabolishing connection...")
-	var pubKeys PubKey
+	var serverPubKey PubKey
 	conn, err := net.Dial("tcp", os.Args[1])
 	if err != nil {
 		fmt.Println("Failed to connect: " + err.Error())
 		return
 	}
+	fmt.Println("Connection Estabolished")
+	fmt.Println("Generating Key...")
+	k := 1024
+	pubKey, privKey := genKeys(k)
+	fmt.Println(pubKey)
+	fmt.Println(privKey)
 
 	nin := bufio.NewScanner(bufio.NewReader(conn))
 	nin.Split(bufio.ScanLines)
@@ -39,10 +45,12 @@ func main() {
 			p.SetString(parts[1], 10)
 			g.SetString(parts[2], 10)
 			a.SetString(parts[3], 10)
-			pubKeys.p = &p
-			pubKeys.g = &g
-			pubKeys.a = &a
-			fmt.Println(pubKeys)
+			serverPubKey.p = &p
+			serverPubKey.g = &g
+			serverPubKey.a = &a
+			fmt.Println(serverPubKey)
+			keyCommand := "PUBKEY " + pubKey.p.String() + " " + pubKey.g.String() + " " + pubKey.a.String() + "\n"
+			fmt.Fprintf(conn, keyCommand)
 		}
 	}
 }
