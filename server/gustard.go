@@ -59,6 +59,8 @@ func main() {
 			continue
 		}
 
+		fmt.Print("Accepted connection: ")
+		fmt.Println(conn.RemoteAddr().String())
 		go handler(conn)
 	}
 

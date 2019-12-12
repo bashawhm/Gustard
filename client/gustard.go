@@ -25,8 +25,8 @@ func main() {
 	fmt.Println("Generating Key...")
 	k := 1024
 	pubKey, privKey := genKeys(k)
-	fmt.Println(pubKey)
-	fmt.Println(privKey)
+	fmt.Println("CLI Pub Key ", pubKey)
+	fmt.Println("CLI Priv Key ", privKey)
 
 	nin := bufio.NewScanner(bufio.NewReader(conn))
 	nin.Split(bufio.ScanLines)
@@ -48,7 +48,7 @@ func main() {
 			serverPubKey.p = &p
 			serverPubKey.g = &g
 			serverPubKey.a = &a
-			fmt.Println(serverPubKey)
+			fmt.Println("SERV Pub Key ", serverPubKey)
 			keyCommand := "PUBKEY " + pubKey.p.String() + " " + pubKey.g.String() + " " + pubKey.a.String() + "\n"
 			fmt.Fprintf(conn, keyCommand)
 		}
