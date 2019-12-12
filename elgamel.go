@@ -2,6 +2,7 @@ package main
 
 import (
 	crand "crypto/rand"
+	"io"
 	"math/big"
 	"math/rand"
 	"time"
@@ -18,15 +19,24 @@ type PrivKey struct {
 }
 
 func genGenerator(rand io.Reader, p *big.Int) *big.Int {
-	var G big.Int
-	var totient := p-1
+	var G *big.Int
+	var totient big.Int
+	var tmp big.Int
+	tmp.SetInt64(1)
+	totient.Sub(p, &tmp)
 	var isGenerator = false
 	for !isGenerator {
-		G = crand.Int(rand,p)
+		G, _ = crand.Int(rand, p)
 		//Test gcd(G,totient) = 1
-	}	
+		var test big.Int
+		test.GCD(nil, nil, G, &totient)
+		if test.Cmp(&tmp) == 0 {
+			isGenerator = true
+		}
+
+	}
 	//TODO: All of this
-	return &G
+	return G
 }
 
 func genKeys(k int) (PubKey, PrivKey) {
@@ -36,7 +46,7 @@ func genKeys(k int) (PubKey, PrivKey) {
 
 	pubKey.p, _ = crand.Prime(rng, k) //Bruh moment, we need a safe prime
 
-	// pubKey.g = genGenerator(pubKey.p)
+	pubKey.g = genGenerator(rng, pubKey.p)
 	privKey.b, _ = crand.Int(rng, pubKey.p)
 	// pubKey.a.Exp(pubKey.g, privKey.b, pubKey.p)
 
