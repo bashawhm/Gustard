@@ -11,6 +11,10 @@ func handler(client net.Conn) {
 	pubKey, privKey := genKeys(k)
 	fmt.Println(pubKey)
 	fmt.Println(privKey)
+
+	keyCommand := "PUBKEY " + pubKey.p.String() + " " + pubKey.g.String() + " " + pubKey.a.String() + "\n"
+	fmt.Fprintf(client, keyCommand)
+
 }
 
 func main() {

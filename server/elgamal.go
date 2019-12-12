@@ -33,9 +33,8 @@ func genGenerator(rand io.Reader, p *big.Int) *big.Int {
 		if test.Cmp(&tmp) == 0 {
 			isGenerator = true
 		}
-
 	}
-	//TODO: All of this
+
 	return G
 }
 
