@@ -24,7 +24,7 @@ func main() {
 		fmt.Println("Usage: " + os.Args[0] + " <IP>")
 		return
 	}
-	fmt.Println("Estabolishing connection...")
+	fmt.Println("Estabolishing connection...") //Establishing or Abolishing? Which one Hunter?
 	var serverPubKey PubKey
 	conn, err := net.Dial("tcp", os.Args[1])
 	if err != nil {
