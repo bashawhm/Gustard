@@ -66,10 +66,10 @@ func genKeys(k int) (PubKey, PrivKey) {
 	pubKey.p = &safe
 	pubKey.g = genGenerator(rng, pubKey.p, q)
 	privKey.b, _ = crand.Int(rng, pubKey.p)
-	fmt.Println("g=",pubKey.g.String())
-	fmt.Println("b=",privKey.b.String())
+	fmt.Println("g=", pubKey.g.String())
+	fmt.Println("b=", privKey.b.String())
 	pubKey.a = new(big.Int)
 	pubKey.a.Exp(pubKey.g, privKey.b, pubKey.p)
-	fmt.Println("a=",pubKey.a.String())
+	fmt.Println("a=", pubKey.a.String())
 	return pubKey, privKey
 }

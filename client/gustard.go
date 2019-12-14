@@ -2,12 +2,26 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"net"
 	"os"
 	"strings"
 )
+
+func genAESCipher() (cipher.Block, []byte) {
+	key := make([]byte, 32)
+	rand.Read(key)
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		fmt.Println("Failed to generate new aes key")
+		panic(err)
+	}
+	return cipher, key
+}
 
 func chatter(conn net.Conn) {
 	cin := bufio.NewScanner(bufio.NewReader(os.Stdin))
