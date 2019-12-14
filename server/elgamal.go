@@ -19,6 +19,11 @@ type PrivKey struct {
 	b *big.Int
 }
 
+type Cipher struct {
+	half_mask *big.Int
+	ciphertext *big.Int
+}
+
 func getNumber(x int64) big.Int {
 	var num big.Int
 	num.SetInt64(x)
@@ -72,4 +77,53 @@ func genKeys(k int) (PubKey, PrivKey) {
 	pubKey.a.Exp(pubKey.g, privKey.b, pubKey.p)
 	fmt.Println("a=",pubKey.a.String())
 	return pubKey, privKey
+}
+
+func encrypt(m *big.Int,keys *PubKey, rng io.Reader) Cipher {
+	var totient big.Int
+	var pMinusOne big.Int
+	one := getNumber(1)
+	two := getNumber(2)
+	pMinusOne.Sub(keys.p,&one)
+	totient.Div(&pMinusOne,&two) //This code has now been copied like three times. Probably should be a function
+	
+	beta,_ := crand.Int(rng,&totient)
+	alpha := getNumber(0)
+	alpha.Exp(keys.g,beta,keys.p) //alpha is now the half-mask
+	omega := getNumber(0)
+	omega.Exp(keys.a,beta,keys.p) //omega is now the full-mask
+	y := getNumber(0) //this is my constructor... bjarne weeps
+	y.Mul(m,&omega)
+	var c Cipher
+	c.half_mask = &alpha
+	c.ciphertext = &y
+	return c
+}
+
+func encode_and_encrypt(msg string, keys *PubKey) []Cipher {
+	var totient big.Int
+	var pMinusOne big.Int
+	one := getNumber(1) //Oh god why is this big number library so horrible
+	two := getNumber(2)
+	pMinusOne.Sub(keys.p,&one)
+	totient.Div(&pMinusOne,&two) //This is now the number of elements in the group
+	numBits := totient.BitLen() //This is how many bits we can yeet out of msg and encode at once
+	numChars := numBits/8
+	msg_group_elem := getNumber(0)
+	prevI := 0
+	encryptions := make([]Cipher,len(msg)/numChars)
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := numChars; i < len(msg)/numChars; i += numChars {
+		slice := msg[prevI:i]
+		bytes := []byte(slice)
+		msg_group_elem.SetBytes(bytes)
+		ciphertext := encrypt(&msg_group_elem,keys,rng)
+		encryptions[i/numChars] = ciphertext
+		prevI = i
+	}
+	return encryptions
+}
+
+func decrypt_and_decode(cs []Cipher, keys *PubKey, priv *PrivKey) string {
+	return "" //TODO
 }
