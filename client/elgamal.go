@@ -34,7 +34,6 @@ func (c Cipher) String() string {
 func toCipher(s string) Cipher {
 	var cs Cipher
 	parts := strings.Split(s, "|")
-	// fmt.Println("cipher parts: ", parts)
 	var h big.Int
 	var c big.Int
 	h.SetString(parts[0], 10)
@@ -158,7 +157,7 @@ func decrypt_and_decode(cs []Cipher, keys *PubKey, priv *PrivKey) string {
 		decrypted := getNumber(0)
 		decrypted.Mul(y, &full_mask)
 		decrypted.Mod(&decrypted, keys.p)
-		s := string(decrypted.Bytes())
+		s := strings.Trim(string(decrypted.Bytes()),"*")
 		decoded += s
 	}
 	return decoded
