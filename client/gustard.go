@@ -12,6 +12,34 @@ import (
 	"strings"
 )
 
+func aesSplitMsg(s string) []string {
+	var res []string
+	tmp := ""
+	res = append(res, "BEGINMSG********")
+	for i := 0; i < len(s); i += 16 {
+		if i+16 > len(s) {
+			tmp = ""
+			tmp = s[i:]
+			for j := (i / 16) + len(tmp); j < 16; j++ {
+				tmp += "*"
+			}
+			res = append(res, tmp)
+			break
+		}
+		res = append(res, tmp)
+	}
+	res = append(res, "ENDMSG**********")
+	return res
+}
+
+func aesMergeMsg(s []string) string {
+	res := ""
+	for i := 1; i < len(s)-1; i++ {
+		res += s[i]
+	}
+	return res
+}
+
 func genAESCipher() (cipher.Block, []byte) {
 	key := make([]byte, 32)
 	rand.Read(key)
@@ -23,13 +51,17 @@ func genAESCipher() (cipher.Block, []byte) {
 	return cipher, key
 }
 
-func chatter(conn net.Conn) {
+func chatter(conn net.Conn, aesBlock cipher.Block) {
 	cin := bufio.NewScanner(bufio.NewReader(os.Stdin))
 	cin.Split(bufio.ScanLines)
 
 	for cin.Scan() {
-		//TODO: encryption
-		fmt.Fprintf(conn, cin.Text()+"\n")
+		ss := aesSplitMsg(cin.Text())
+		for i := 0; i < len(ss); i++ {
+			s := make([]byte, 16)
+			aesBlock.Encrypt(s, []byte(ss[i]))
+			fmt.Fprintf(conn, string(s)+"\n")
+		}
 	}
 }
 
@@ -50,11 +82,10 @@ func main() {
 	k := 256
 	pubKey, privKey := genKeys(k)
 	var key []byte
-	var aes cipher.Block
-	fmt.Println("CLI Pub Key ", pubKey)
-	fmt.Println("CLI Priv Key ", privKey)
-
-	go chatter(conn)
+	var serverKey []byte
+	var aesBlock cipher.Block
+	// fmt.Println("CLI Pub Key ", pubKey)
+	// fmt.Println("CLI Priv Key ", privKey)
 
 	nin := bufio.NewScanner(bufio.NewReader(conn))
 	nin.Split(bufio.ScanLines)
@@ -80,8 +111,7 @@ func main() {
 			keyCommand := "PUBKEY " + pubKey.p.String() + " " + pubKey.g.String() + " " + pubKey.a.String() + "\n"
 			fmt.Fprintf(conn, keyCommand)
 
-			aes, key = genAESCipher()
-			fmt.Println("aes: ", aes)
+			aesBlock, key = genAESCipher()
 			keyCommand = "AESSYMKEY " + string(key) + "\n"
 			cipher := encode_and_encrypt(keyCommand, &serverPubKey)
 			cipherString := ""
@@ -89,13 +119,13 @@ func main() {
 				cipherString += cipher[i].String() + " "
 			}
 			fmt.Fprintf(conn, cipherString+"\n")
-			// fmt.Println("Encoded: ", cipherString)
 			goto AES
 		default:
 			fmt.Println(command)
 		}
 	}
 
+	fmt.Println("Exchanging AES Key...")
 AES:
 	for nin.Scan() {
 		command := nin.Text()
@@ -108,7 +138,28 @@ AES:
 		parts = strings.Split(command, " ")
 		switch parts[0] {
 		case "AESSYMKEY":
-			fmt.Println("Parts: ", parts)
+			serverKey = []byte(parts[1])[:32]
+			goto normal
+		}
+	}
+
+normal:
+	servBlock, _ := aes.NewCipher(serverKey)
+	go chatter(conn, aesBlock)
+	fmt.Println("Server Ready")
+	var sBlock []string
+	input := make([]byte, 16)
+	for {
+		s := make([]byte, 16)
+		conn.Read(input)
+
+		servBlock.Decrypt(s, input)
+		sBlock = append(sBlock, string(s))
+		if string(s) == "ENDMSG**********" {
+			res := aesMergeMsg(sBlock)
+			sBlock = []string{}
+			res = strings.Trim(res, "*")
+			fmt.Println(res)
 		}
 	}
 }

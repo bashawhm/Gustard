@@ -11,15 +11,22 @@ import (
 	"strings"
 )
 
-func broadcaster(msgs chan string, clis chan net.Conn) {
-	var clients []net.Conn
+type Connection struct {
+	cli net.Conn
+	aes cipher.Block
+}
+
+func broadcaster(msgs chan string, clis chan Connection) {
+	var clients []Connection
 	for {
 		select {
 		case cli := <-clis:
 			clients = append(clients, cli)
 		case msg := <-msgs:
 			for i := 0; i < len(clients); i++ {
-				fmt.Fprintf(clients[i], msg)
+				s := make([]byte, 16)
+				clients[i].aes.Encrypt(s, []byte(msg))
+				fmt.Fprintf(clients[i].cli, string(s))
 			}
 		}
 	}
@@ -36,14 +43,15 @@ func genAESCipher() (cipher.Block, []byte) {
 	return cipher, key
 }
 
-func handler(client net.Conn, msgs chan string) {
+func handler(client net.Conn, msgs chan string, clis chan Connection) {
 	k := 256
 
 	fmt.Println("Generating Keys...")
 	pubKey, privKey := genKeys(k)
 	var clientPubKey PubKey
 	var key []byte
-	var aes cipher.Block
+	var clientKey []byte
+	var aesBlock cipher.Block
 	fmt.Println(pubKey)
 	fmt.Println(privKey)
 
@@ -72,8 +80,7 @@ func handler(client net.Conn, msgs chan string) {
 			clientPubKey.a = &a
 			fmt.Println(clientPubKey)
 
-			aes, key = genAESCipher()
-			fmt.Println("aes: ", aes)
+			aesBlock, key = genAESCipher()
 			keyCommand = "AESSYMKEY " + string(key) + "\n"
 			cipher := encode_and_encrypt(keyCommand, &clientPubKey)
 			cipherString := ""
@@ -81,13 +88,13 @@ func handler(client net.Conn, msgs chan string) {
 				cipherString += cipher[i].String() + " "
 			}
 			fmt.Fprintf(client, cipherString+"\n")
-			// fmt.Println("Encoded: ", cipherString)
 			goto AES
 		default:
 			fmt.Println(command)
 		}
 	}
 
+	fmt.Println("Exchanging AES Key...")
 AES:
 	for nin.Scan() {
 		command := nin.Text()
@@ -100,8 +107,21 @@ AES:
 		parts = strings.Split(command, " ")
 		switch parts[0] {
 		case "AESSYMKEY":
-			fmt.Println("Parts: ", parts)
+			clientKey = []byte(parts[1])[:32]
+			clis <- Connection{cli: client, aes: aesBlock}
+			goto normal
 		}
+	}
+
+normal:
+	cliAES, _ := aes.NewCipher(clientKey)
+	fmt.Println("Client Ready")
+	for nin.Scan() {
+		input := make([]byte, 16)
+		input = []byte(nin.Text()[:16])
+		s := make([]byte, 16)
+		cliAES.Decrypt(s, input)
+		msgs <- string(s)
 	}
 }
 
@@ -113,8 +133,8 @@ func main() {
 		return
 	}
 
-	msgs := make(chan string, 1)
-	clients := make(chan net.Conn, 1)
+	msgs := make(chan string, 10)
+	clients := make(chan Connection, 10)
 
 	go broadcaster(msgs, clients)
 
@@ -127,8 +147,6 @@ func main() {
 
 		fmt.Print("Accepted connection: ")
 		fmt.Println(conn.RemoteAddr().String())
-		clients <- conn
-		go handler(conn, msgs)
+		go handler(conn, msgs, clients)
 	}
-
 }
