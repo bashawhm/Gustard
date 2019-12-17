@@ -107,6 +107,7 @@ AES:
 		parts = strings.Split(command, " ")
 		switch parts[0] {
 		case "AESSYMKEY":
+			fmt.Println("AESKEYLEN: ", len(parts[1]))
 			clientKey = []byte(parts[1])[:32]
 			clis <- Connection{cli: client, aes: aesBlock}
 			goto normal
@@ -116,9 +117,14 @@ AES:
 normal:
 	cliAES, _ := aes.NewCipher(clientKey)
 	fmt.Println("Client Ready")
-	for nin.Scan() {
+	for {
 		input := make([]byte, 16)
-		input = []byte(nin.Text()[:16])
+		_, err := client.Read(input)
+		if err != nil {
+			fmt.Println("Client Disconnected")
+			return
+		}
+		fmt.Println("Input: ", input)
 		s := make([]byte, 16)
 		cliAES.Decrypt(s, input)
 		msgs <- string(s)

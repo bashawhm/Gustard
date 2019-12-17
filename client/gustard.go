@@ -20,13 +20,13 @@ func aesSplitMsg(s string) []string {
 		if i+16 > len(s) {
 			tmp = ""
 			tmp = s[i:]
-			for j := (i / 16) + len(tmp); j < 16; j++ {
+			for j := (i / 16) + len(tmp); j <= 16; j++ {
 				tmp += "*"
 			}
 			res = append(res, tmp)
 			break
 		}
-		res = append(res, tmp)
+		res = append(res, s[i:i+16])
 	}
 	res = append(res, "ENDMSG**********")
 	return res
@@ -59,8 +59,8 @@ func chatter(conn net.Conn, aesBlock cipher.Block) {
 		ss := aesSplitMsg(cin.Text())
 		for i := 0; i < len(ss); i++ {
 			s := make([]byte, 16)
-			aesBlock.Encrypt(s, []byte(ss[i]))
-			fmt.Fprintf(conn, string(s)+"\n")
+			aesBlock.Encrypt(s, []byte(ss[i][:16]))
+			fmt.Fprintf(conn, string(s))
 		}
 	}
 }
@@ -84,8 +84,6 @@ func main() {
 	var key []byte
 	var serverKey []byte
 	var aesBlock cipher.Block
-	// fmt.Println("CLI Pub Key ", pubKey)
-	// fmt.Println("CLI Priv Key ", privKey)
 
 	nin := bufio.NewScanner(bufio.NewReader(conn))
 	nin.Split(bufio.ScanLines)
@@ -151,7 +149,10 @@ normal:
 	input := make([]byte, 16)
 	for {
 		s := make([]byte, 16)
-		conn.Read(input)
+		_, err := conn.Read(input)
+		if err != nil {
+			panic(err)
+		}
 
 		servBlock.Decrypt(s, input)
 		sBlock = append(sBlock, string(s))
