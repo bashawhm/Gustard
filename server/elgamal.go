@@ -2,7 +2,6 @@ package main
 
 import (
 	crand "crypto/rand"
-	"fmt"
 	"io"
 	"math/big"
 	"math/rand"
@@ -71,12 +70,8 @@ func genKeys(k int) (PubKey, PrivKey) {
 	pubKey.p = &safe
 	pubKey.g = genGenerator(rng, pubKey.p, q)
 	privKey.b, _ = crand.Int(rng, pubKey.p)
-	fmt.Println("p=", pubKey.p.String())
-	fmt.Println("g=", pubKey.g.String())
-	fmt.Println("b=", privKey.b.String())
 	pubKey.a = new(big.Int)
 	pubKey.a.Exp(pubKey.g, privKey.b, pubKey.p)
-	fmt.Println("a=", pubKey.a.String())
 	return pubKey, privKey
 }
 
@@ -99,7 +94,6 @@ func encrypt(m *big.Int, keys *PubKey, rng io.Reader) Cipher {
 	var c Cipher
 	c.half_mask = &alpha
 	c.ciphertext = &y
-	fmt.Println("encrypt(): c=", c)
 	return c
 }
 
@@ -115,17 +109,13 @@ func encode_and_encrypt(msg string, keys *PubKey) []Cipher {
 	msg_group_elem := getNumber(0)
 	encryptions := make([]Cipher, len(msg)/numChars)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	fmt.Println("len(msg)/numChars=", len(msg)/numChars)
 	for i := 0; i < len(msg)/numChars; i += numChars {
 		slice := msg[i : i+numChars]
-		fmt.Println("slice", i, "=", slice)
 		bytes := []byte(slice)
 		msg_group_elem.SetBytes(bytes)
-		fmt.Println("msg_group_elem", i, "=", msg_group_elem.String())
 		ciphertext := encrypt(&msg_group_elem, keys, rng)
 		encryptions[i/numChars] = ciphertext
 	}
-	fmt.Println("encode_and_encrypt(),encryptions=", encryptions)
 	return encryptions
 }
 
@@ -145,14 +135,4 @@ func decrypt_and_decode(cs []Cipher, keys *PubKey, priv *PrivKey) string {
 		decoded += s
 	}
 	return decoded
-}
-
-func main() {
-	pub, priv := genKeys(8)
-	fmt.Println(pub)
-	fmt.Println(priv)
-	ciphers := encode_and_encrypt("Hi hunter!", &pub)
-	fmt.Println(ciphers[0].ciphertext.String(), ciphers[0].half_mask.String())
-	decrypt := decrypt_and_decode(ciphers, &pub, &priv)
-	fmt.Println(decrypt)
 }
