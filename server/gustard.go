@@ -37,11 +37,13 @@ func genAESCipher() (cipher.Block, []byte) {
 }
 
 func handler(client net.Conn, msgs chan string) {
-	k := 1024
+	k := 256
 
 	fmt.Println("Generating Keys...")
 	pubKey, privKey := genKeys(k)
 	var clientPubKey PubKey
+	var key []byte
+	var aes cipher.Block
 	fmt.Println(pubKey)
 	fmt.Println(privKey)
 
@@ -69,8 +71,36 @@ func handler(client net.Conn, msgs chan string) {
 			clientPubKey.g = &g
 			clientPubKey.a = &a
 			fmt.Println(clientPubKey)
+
+			aes, key = genAESCipher()
+			fmt.Println("aes: ", aes)
+			keyCommand = "AESSYMKEY " + string(key) + "\n"
+			cipher := encode_and_encrypt(keyCommand, &clientPubKey)
+			cipherString := ""
+			for i := 0; i < len(cipher); i++ {
+				cipherString += cipher[i].String() + " "
+			}
+			fmt.Fprintf(client, cipherString+"\n")
+			// fmt.Println("Encoded: ", cipherString)
+			goto AES
 		default:
 			fmt.Println(command)
+		}
+	}
+
+AES:
+	for nin.Scan() {
+		command := nin.Text()
+		parts := strings.Split(command, " ")
+		var cs []Cipher
+		for i := 0; i < len(parts)-1; i++ {
+			cs = append(cs, toCipher(parts[i]))
+		}
+		command = decrypt_and_decode(cs, &pubKey, &privKey)
+		parts = strings.Split(command, " ")
+		switch parts[0] {
+		case "AESSYMKEY":
+			fmt.Println("Parts: ", parts)
 		}
 	}
 }

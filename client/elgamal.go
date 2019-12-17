@@ -24,6 +24,26 @@ type Cipher struct {
 	ciphertext *big.Int
 }
 
+func (c Cipher) String() string {
+	s := ""
+	s += c.half_mask.String() + "|"
+	s += c.ciphertext.String()
+	return s
+}
+
+func toCipher(s string) Cipher {
+	var cs Cipher
+	parts := strings.Split(s, "|")
+	// fmt.Println("cipher parts: ", parts)
+	var h big.Int
+	var c big.Int
+	h.SetString(parts[0], 10)
+	c.SetString(parts[1], 10)
+	cs.half_mask = &h
+	cs.ciphertext = &c
+	return cs
+}
+
 func getNumber(x int64) big.Int {
 	var num big.Int
 	num.SetInt64(x)
@@ -121,6 +141,8 @@ func encode_and_encrypt(msg string, keys *PubKey) []Cipher {
 		ciphertext := encrypt(&msg_group_elem, keys, rng)
 		encryptions[i/numChars] = ciphertext
 	}
+	// fmt.Println("numBits: ", numBits)
+	// fmt.Println("encryptions: ", encryptions)
 	return encryptions
 }
 
