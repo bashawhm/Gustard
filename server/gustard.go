@@ -23,6 +23,7 @@ func broadcaster(msgs chan string, clis chan Connection) {
 		case cli := <-clis:
 			clients = append(clients, cli)
 		case msg := <-msgs:
+			fmt.Println("msg: ", msg)
 			for i := 0; i < len(clients); i++ {
 				s := make([]byte, 16)
 				clients[i].aes.Encrypt(s, []byte(msg))
@@ -52,8 +53,8 @@ func handler(client net.Conn, msgs chan string, clis chan Connection) {
 	var key []byte
 	var clientKey []byte
 	var aesBlock cipher.Block
-	fmt.Println(pubKey)
-	fmt.Println(privKey)
+	// fmt.Println(pubKey)
+	// fmt.Println(privKey)
 
 	keyCommand := "PUBKEY " + pubKey.p.String() + " " + pubKey.g.String() + " " + pubKey.a.String() + "\n"
 	fmt.Fprintf(client, keyCommand)
@@ -78,7 +79,7 @@ func handler(client net.Conn, msgs chan string, clis chan Connection) {
 			clientPubKey.p = &p
 			clientPubKey.g = &g
 			clientPubKey.a = &a
-			fmt.Println(clientPubKey)
+			// fmt.Println(clientPubKey)
 
 			aesBlock, key = genAESCipher()
 			keyCommand = "AESSYMKEY " + string(key) + "\n"
@@ -90,7 +91,7 @@ func handler(client net.Conn, msgs chan string, clis chan Connection) {
 			fmt.Fprintf(client, cipherString+"\n")
 			goto AES
 		default:
-			fmt.Println(command)
+			fmt.Println("Error: command in bad state: ", command)
 		}
 	}
 
@@ -108,6 +109,10 @@ AES:
 		switch parts[0] {
 		case "AESSYMKEY":
 			fmt.Println("AESKEYLEN: ", len(parts[1]))
+			if len(parts[1]) < 32 {
+				fmt.Println("Key exchange failed")
+				return
+			}
 			clientKey = []byte(parts[1])[:32]
 			clis <- Connection{cli: client, aes: aesBlock}
 			goto normal
@@ -124,7 +129,7 @@ normal:
 			fmt.Println("Client Disconnected")
 			return
 		}
-		fmt.Println("Input: ", input)
+		// fmt.Println("Input: ", input)
 		s := make([]byte, 16)
 		cliAES.Decrypt(s, input)
 		msgs <- string(s)
