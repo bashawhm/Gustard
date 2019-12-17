@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -106,10 +107,14 @@ func encode_and_encrypt(msg string, keys *PubKey) []Cipher {
 	totient.Div(&pMinusOne, &two) //This is now the number of elements in the group
 	numBits := totient.BitLen()   //This is how many bits we can yeet out of msg and encode at once
 	numChars := numBits / 8
+	if len(msg)%numChars != 0 {
+		pad := strings.Repeat("*", numChars-(len(msg)%numChars))
+		msg += pad
+	}
 	msg_group_elem := getNumber(0)
 	encryptions := make([]Cipher, len(msg)/numChars)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < len(msg)/numChars; i += numChars {
+	for i := 0; i < len(msg); i += numChars {
 		slice := msg[i : i+numChars]
 		bytes := []byte(slice)
 		msg_group_elem.SetBytes(bytes)
@@ -136,3 +141,10 @@ func decrypt_and_decode(cs []Cipher, keys *PubKey, priv *PrivKey) string {
 	}
 	return decoded
 }
+
+/*func main() {
+	pub,priv := genKeys(1024)
+	ciphers := encode_and_encrypt("Thisis not a test",&pub)
+	decrypted := decrypt_and_decode(ciphers,&pub,&priv)
+	fmt.Println(decrypted)
+}*/
